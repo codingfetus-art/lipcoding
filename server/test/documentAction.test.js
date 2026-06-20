@@ -43,7 +43,7 @@ test("uses DefaultAzureCredential for Cosmos when only endpoint is configured", 
   delete process.env.AZURE_COSMOS_ENDPOINT;
 });
 
-test("keeps required README.md at the repository root", async () => {
-  const readmePath = path.resolve(process.cwd(), "..", "README.md");
-  await assert.doesNotReject(() => access(readmePath));
+test("keeps required PRD.md at the repository root", async () => {
+  const prdPath = path.resolve(process.cwd(), "..", "PRD.md");
+  await assert.doesNotReject(() => access(prdPath));
 });

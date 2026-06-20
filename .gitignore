@@ -33,6 +33,10 @@ env/
 *.log
 logs/
 
+# Markdown docs
+*.md
+!PRD.md
+
 # OS / Editor
 .DS_Store
 Thumbs.db
