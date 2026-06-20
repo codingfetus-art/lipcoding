@@ -40,9 +40,12 @@
 18. 사용자가 다르게 지시하지 않았다면 플랜 생성 시 마감일까지의 고정 일정과 남은 시간 압박을 우선순위 판단 컨텍스트로 반영한다.
 19. Azure 배포는 App Settings 기반 런타임 설정, `/api/health` 상태 확인, 배포 슬롯을 통한 사전 검증 흐름을 고려한다.
 20. origin/dlsdyd의 문서 액션 기능은 기존 RoutineFit 화면을 덮어쓰지 않고 별도 화면으로 제공한다.
-21. 문서 액션의 Azure OCR, Blob Storage, Cosmos DB 사용은 `DOCUMENT_ACTION_AZURE_ENABLED=true`로 명시적으로 켠 경우에만 허용하고, Cost Management 예산/알림과 무료 크레딧 범위를 먼저 확인한다.
-22. 문서 액션에서 납부기한이나 계약 만기 리마인드가 생성되면 RoutineFit 캘린더에도 반영한다.
-23. 로컬 실행, 빌드 검증, 배포 준비 상태를 확인한 뒤 결과를 보고한다.
+21. 문서 액션의 Azure OCR과 Blob Storage 사용은 `DOCUMENT_ACTION_AZURE_ENABLED=true`로 명시적으로 켠 경우에만 허용하고, Cosmos DB 저장은 `AZURE_COSMOS_ENDPOINT`가 설정된 경우에만 사용한다. Cost Management 예산/알림과 무료 크레딧 범위를 먼저 확인한다.
+22. 문서 액션에서 청구서 납부기한이나 계약 만기 리마인드가 생성되면 `마감: ...` 일정으로 RoutineFit 캘린더에 반영하고, 기준 날짜를 해당 마감일로 이동해 월간/일간 화면에서 즉시 확인할 수 있게 한다.
+23. 문서 액션 지출과 리마인드는 로컬 JSON으로 대체하지 않고 Cosmos DB의 `expenses`, `reminders` 컨테이너에서 저장/조회하며, 같은 문서를 반복 처리해도 안정적인 중복 키로 기존 레코드를 재사용한다.
+24. 저장소가 미설정이면 `/api/health`에서 `storageBackend`가 `cosmos-unconfigured`로 드러나고, 문서 액션 API는 명시적인 설정 오류를 반환해야 한다. `AZURE_COSMOS_KEY`가 없으면 Azure CLI 로그인 또는 Managed Identity를 쓰는 `DefaultAzureCredential` 흐름을 따른다.
+25. 레포지토리 루트에는 심사와 배포 준비 기준을 확인할 수 있는 `README.md`가 반드시 존재해야 한다.
+26. 로컬 실행, 빌드 검증, 배포 준비 상태를 확인한 뒤 결과를 보고한다.
 
 ## 작업 루틴
 

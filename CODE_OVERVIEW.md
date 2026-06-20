@@ -42,7 +42,7 @@ RoutineFit은 `client/src/main.jsx`에서 상태를 관리한다. 주요 상태�
 - `schedule`: 서버가 생성한 하루 플랜과 검증 결과
 - `planProgress`: 현재 선택 날짜의 플랜 진행률
 
-화면은 `일정 홈`, `플랜 설정`, `결과·리뷰`, `문서 액션` 탭으로 나뉜다. 모바일 사용자가 먼저 보는 홈은 월별 일정과 선택 날짜의 하루 타임라인을 중심으로 구성한다.
+화면은 `일정 홈`, `플랜 설정`, `결과·리뷰`, `문서 액션` 탭으로 나뉜다. 모바일 사용자가 먼저 보는 홈은 월별 일정과 선택 날짜의 하루 타임라인을 중심으로 구성한다. 모든 탭은 같은 페이지 헤딩, 요약 카드, 둥근 카드, 파란 계열 액션 버튼을 사용해 서로 다른 기능이 하나의 앱처럼 보이도록 맞춘다.
 
 ## 스케줄 생성 흐름
 
@@ -81,6 +81,7 @@ RoutineFit은 `client/src/main.jsx`에서 상태를 관리한다. 주요 상태�
 ## 문서 액션 화면(origin/dlsdyd)
 
 `client/src/DlsdydDocumentAgent.jsx`는 origin/dlsdyd 브랜치의 문서 처리 UI를 현재 앱에 별도 화면으로 이식한 컴포넌트다.
+현재 RoutineFit UI와 어우러지도록 독립적인 랜딩 화면 느낌을 줄이고, 기존 `page-heading`, `summary-card`, `doc-card` 기반의 카드형 레이아웃으로 정리했다.
 
 지원 흐름:
 
@@ -89,11 +90,13 @@ RoutineFit은 `client/src/main.jsx`에서 상태를 관리한다. 주요 상태�
 3. 영수증이면 지출 기록을 저장하고 월간 요약에 반영한다.
 4. 청구서면 납부기한 리마인드를 만든다.
 5. 계약서면 계약 만기 리마인드와 확인 요청 초안을 만든다.
-6. 납부기한 또는 계약 만기 리마인드는 RoutineFit 캘린더의 고정 일정으로도 추가된다.
+6. 납부기한 또는 계약 만기 리마인드는 `마감: ...` 고정 일정으로 RoutineFit 캘린더에 추가된다.
+7. 청구서 납부기한처럼 마감일이 생성되면 캘린더 기준 날짜를 해당 마감일로 이동해 월간 일정과 하루 시간표에서 바로 보이게 한다.
+8. 같은 영수증, 청구서, 계약서를 다시 처리하면 안정적인 중복 키로 기존 지출 또는 리마인드를 재사용하고 새 레코드를 만들지 않는다.
 
 ## Azure 사용 안전장치
 
-문서 액션의 Azure 기능은 기본적으로 꺼져 있다. 추가 결제를 막기 위해 다음 값이 명시적으로 설정된 경우에만 Azure SDK를 호출한다.
+문서 액션의 저장소는 Azure Cosmos DB를 사용한다. `AZURE_COSMOS_ENDPOINT`가 설정된 경우에만 Cosmos SDK를 호출하며, 미설정 상태에서는 로컬 JSON으로 대체하지 않고 설정 오류를 반환한다. `AZURE_COSMOS_KEY`가 없으면 `DefaultAzureCredential`을 사용하므로 로컬에서는 Azure CLI 로그인, Azure 배포에서는 Managed Identity로 인증할 수 있다.
 
 ```text
 DOCUMENT_ACTION_AZURE_ENABLED=true
@@ -103,9 +106,9 @@ DOCUMENT_ACTION_AZURE_ENABLED=true
 
 - Azure AI Document Intelligence: 이미지/PDF OCR
 - Azure Blob Storage: 원본 문서 저장
-- Azure Cosmos DB: 지출 기록과 리마인드 영구 저장
+- Azure Cosmos DB: 지출 기록과 리마인드 영구 저장. `AZURE_COSMOS_ENDPOINT`가 설정되면 `origin/dlsdyd`의 `/userId` 파티션 저장 패턴처럼 `expenses`, `reminders` 컨테이너를 만들고 Cosmos DB에서 저장/조회한다.
 
-기본값은 로컬 JSON 저장과 텍스트/파일명 기반 처리다. Azure를 켜기 전에는 Azure Cost Management 예산과 알림, 무료 크레딧/지출 제한을 먼저 설정해야 한다. 필요한 환경변수 예시는 `server/.env.example`에 정리되어 있다.
+Azure를 켜기 전에는 Azure Cost Management 예산과 알림, 무료 크레딧/지출 제한을 먼저 설정해야 한다. 필요한 환경변수 예시는 `server/.env.example`에 정리되어 있다. Azure App Service에서는 이 값들을 App Settings에 넣고 `/api/health`의 `documentAction.storageBackend`가 `cosmos`인지 확인한다. 루트 `README.md`는 배포 준비와 심사자가 확인하는 기준 문서로 유지한다.
 
 ## 서버 API
 

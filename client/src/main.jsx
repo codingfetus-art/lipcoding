@@ -283,18 +283,22 @@ function App() {
     const event = {
       id: `doc-reminder-${reminder.id}`,
       date: reminder.dueDate,
-      title: reminder.title,
+      title: `마감: ${reminder.title}`,
       start: DOCUMENT_REMINDER_START,
       end: DOCUMENT_REMINDER_END
     };
 
     updateState((current) => ({
       ...current,
+      planningStartDate: reminder.dueDate,
       fixedEvents: [
         ...current.fixedEvents.filter((item) => item.id !== event.id),
         event
       ]
     }));
+    setNewEvent((current) => ({ ...current, date: reminder.dueDate }));
+    setNewTask((current) => ({ ...current, dueDate: reminder.dueDate }));
+    setReview(null);
 
     return event;
   }

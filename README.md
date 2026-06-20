@@ -23,15 +23,18 @@ RoutineFit AI Scheduler is a web-only personal productivity app that plans one d
 - Selected-day progress percentage tracking and AI execution review
 - Previous plan history is stored separately from routine patterns and carries unfinished work into the next generated plan
 - Separate `origin/dlsdyd` document action screen for receipts, bills, contracts, reminders, and monthly expense summary
-- Document Action Azure OCR, Blob Storage, and Cosmos DB integrations are gated by `DOCUMENT_ACTION_AZURE_ENABLED=true` to avoid unexpected paid usage
-- Bill and contract reminders extracted in Document Action are added to the RoutineFit calendar
+- Unified tab, summary-card, and card layout so RoutineFit and Document Action feel like one app
+- Document Action expense and reminder persistence uses Azure Cosmos DB; if Cosmos is not configured, the API returns an explicit configuration error instead of falling back to local JSON
+- Document Action Azure OCR and Blob Storage integrations are gated by `DOCUMENT_ACTION_AZURE_ENABLED=true` to avoid unexpected paid usage
+- Document Action records use stable duplicate keys so repeated receipts, bills, and contract reminders reuse the existing record instead of creating another one
+- Bill due dates and contract reminders extracted in Document Action are added to the RoutineFit calendar as `마감: ...` events, and the selected calendar date moves to the due date
 - Azure Web App deployment workflow for the `jinu` branch
 
 ## Azure credit safety
 
-The `origin/dlsdyd` Azure features are optional. By default, Document Action uses local JSON storage and text/file-name processing only. Azure Document Intelligence OCR, Blob Storage upload, and Cosmos DB persistence are used only when `DOCUMENT_ACTION_AZURE_ENABLED=true` and the matching Azure environment variables are configured.
+The root of this repository must keep this `README.md` file so reviewers and Azure deployment checks can find the app overview, runtime settings, and validation commands in one place.
 
-Before enabling Azure usage, keep the subscription within free-credit controls: use Azure Cost Management budgets and alerts, keep free-account spending limits enabled where available, and do not add secrets to source control. See `server\.env.example` for the required variables.
+Document Action no longer falls back to local JSON for expenses and reminders. Set `AZURE_COSMOS_ENDPOINT` as an Azure App Service App Setting or local environment variable so `expenses` and `reminders` are saved and loaded from Cosmos DB. If `AZURE_COSMOS_KEY` is omitted, the server uses `DefaultAzureCredential`, which supports Azure CLI login during local development and managed identity on Azure. Before enabling paid Azure resources, keep the subscription within free-credit controls: use Azure Cost Management budgets and alerts, keep free-account spending limits enabled where available, and do not add secrets to source control. See `server\.env.example` for the required variables.
 
 ## Local development
 
@@ -77,6 +80,10 @@ Use environment variables instead of hardcoded runtime values:
 | `COPILOT_TIMEOUT_MS` | Copilot SDK request timeout. Defaults to `45000`. |
 | `COPILOT_RUNTIME_PATH` | Optional Copilot runtime path override. |
 | `COPILOT_CLI_PATH` | Backward-compatible Copilot runtime path override. |
+| `DOCUMENT_ACTION_AZURE_ENABLED` | Enables optional Document Intelligence OCR and Blob upload when set to `true`. Cosmos storage is controlled by `AZURE_COSMOS_ENDPOINT`. |
+| `AZURE_COSMOS_ENDPOINT` | Cosmos DB account endpoint. Required for Document Action expense/reminder storage. |
+| `AZURE_COSMOS_KEY` | Optional Cosmos DB key. If omitted, `DefaultAzureCredential` uses Azure CLI login locally or managed identity on Azure. |
+| `AZURE_COSMOS_DATABASE` | Cosmos DB database name. Defaults to `docuagent`. |
 
 The server exposes `GET /api/health` for cloud readiness checks. It returns app status, Copilot SDK configuration readiness, timeout settings, and whether it appears to be running on Azure App Service. It does not return secrets, tokens, runtime paths, or credentials.
 

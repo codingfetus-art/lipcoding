@@ -25,6 +25,12 @@ const TYPE_META = {
   other: { icon: "📄", label: "기타 문서", tone: "other" }
 };
 
+const EMPTY_SUMMARY = {
+  total: 0,
+  byCategory: {},
+  count: 0
+};
+
 function won(value) {
   return `${Number(value || 0).toLocaleString("ko-KR")}원`;
 }
@@ -88,14 +94,30 @@ async function postDocument({ text, file }) {
   return data;
 }
 
+async function readJsonResponse(response, fallbackMessage) {
+  const data = await response.json();
+  if (!response.ok) {
+    const error = new Error(data.error || fallbackMessage);
+    error.code = data.code;
+    throw error;
+  }
+  return data;
+}
+
 async function getSummary() {
   const response = await fetch("/api/summary");
-  return response.json();
+  return readJsonResponse(response, "문서 요약 조회 실패");
 }
 
 async function getReminders() {
   const response = await fetch("/api/reminders");
-  return response.json();
+  return readJsonResponse(response, "문서 리마인드 조회 실패");
+}
+
+async function getDocumentActionRuntime() {
+  const response = await fetch("/api/health");
+  const health = await readJsonResponse(response, "문서 액션 설정 확인 실패");
+  return health.documentAction;
 }
 
 async function readSupportedFile(file) {
@@ -118,18 +140,47 @@ export default function DlsdydDocumentAgent({ onReminderCreated }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [storageNotice, setStorageNotice] = useState("");
+  const [storageReady, setStorageReady] = useState(false);
   const [calendarNotice, setCalendarNotice] = useState("");
-  const [summary, setSummary] = useState(null);
+  const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const [reminders, setReminders] = useState([]);
 
   async function refresh() {
-    const [nextSummary, nextReminders] = await Promise.all([getSummary(), getReminders()]);
-    setSummary(nextSummary);
-    setReminders(nextReminders);
+    const runtime = await getDocumentActionRuntime();
+    if (runtime?.storageBackend !== "cosmos") {
+      setStorageReady(false);
+      setSummary(EMPTY_SUMMARY);
+      setReminders([]);
+      setStorageNotice(
+        "문서 액션 저장소는 Azure Cosmos DB가 필요합니다. AZURE_COSMOS_ENDPOINT를 설정하고 Azure CLI 로그인 또는 Managed Identity 권한을 준비하세요."
+      );
+      return;
+    }
+
+    setStorageReady(true);
+    const [summaryResult, remindersResult] = await Promise.allSettled([getSummary(), getReminders()]);
+    const notices = [];
+
+    if (summaryResult.status === "fulfilled") {
+      setSummary(summaryResult.value);
+    } else {
+      setSummary(EMPTY_SUMMARY);
+      notices.push(summaryResult.reason.message);
+    }
+
+    if (remindersResult.status === "fulfilled") {
+      setReminders(Array.isArray(remindersResult.value) ? remindersResult.value : []);
+    } else {
+      setReminders([]);
+      notices.push(remindersResult.reason.message);
+    }
+
+    setStorageNotice([...new Set(notices)].join(" "));
   }
 
   useEffect(() => {
-    refresh().catch((requestError) => setError(requestError.message));
+    refresh().catch((requestError) => setStorageNotice(requestError.message));
   }, []);
 
   const maxCategory = useMemo(() => {
@@ -158,6 +209,10 @@ export default function DlsdydDocumentAgent({ onReminderCreated }) {
 
     setLoading(true);
     try {
+      if (!storageReady) {
+        throw new Error("Azure Cosmos DB 설정이 완료된 뒤 문서를 처리할 수 있습니다.");
+      }
+
       const processed = await postDocument({
         text: combinedText || undefined,
         file
@@ -166,7 +221,9 @@ export default function DlsdydDocumentAgent({ onReminderCreated }) {
       if (processed.reminder && onReminderCreated) {
         const event = onReminderCreated(processed.reminder);
         if (event) {
-          setCalendarNotice(`${event.date} ${event.start}-${event.end} 캘린더에 추가했습니다.`);
+          setCalendarNotice(
+            `${event.date} ${event.start}-${event.end} 캘린더에 추가하고 기준 날짜를 마감일로 이동했습니다.`
+          );
         }
       }
       await refresh();
@@ -178,26 +235,47 @@ export default function DlsdydDocumentAgent({ onReminderCreated }) {
   }
 
   const meta = result ? TYPE_META[result.documentType] ?? TYPE_META.other : null;
+  const monthlyTotal = summary ? won(summary.total) : "0원";
+  const reminderCount = sortedReminders.length;
+  const processedLabel = meta ? meta.label : "대기 중";
 
   return (
-    <section className="doc-agent">
-      <div className="doc-bg-orbs" aria-hidden="true">
-        <span className="doc-orb doc-orb-1" />
-        <span className="doc-orb doc-orb-2" />
+    <section className="page-panel doc-agent">
+      <div className="page-heading doc-page-heading">
+        <div>
+          <p className="eyebrow dark">Document action</p>
+          <h2>문서 액션 에이전트</h2>
+          <p className="muted">
+            영수증·청구서·계약서를 처리하고, 납부기한과 계약 만기일은
+            RoutineFit 캘린더에 연결합니다.
+          </p>
+        </div>
       </div>
 
-      <header className="doc-hero">
-        <div className="doc-hero-badge">
-          <span className="doc-pulse" /> origin/dlsdyd 화면
-        </div>
-        <h2>
-          문서 <span>액션 에이전트</span>
-        </h2>
-        <p>
-          영수증·청구서·계약서를 입력하면 문서를 분류하고 지출 기록,
-          리마인드, 초안 작성까지 한 화면에서 확인합니다.
+      <div className="summary-strip doc-metric-strip">
+        <article className="summary-card">
+          <span>이번 달 지출</span>
+          <strong>{monthlyTotal}</strong>
+          <small>문서 액션에서 저장된 영수증 기준</small>
+        </article>
+        <article className="summary-card">
+          <span>다가오는 마감</span>
+          <strong>{reminderCount}건</strong>
+          <small>청구서 납부기한과 계약 만기일</small>
+        </article>
+        <article className="summary-card">
+          <span>최근 처리 문서</span>
+          <strong>{processedLabel}</strong>
+          <small>{result ? "마지막 처리 결과 기준" : "아직 처리 전입니다"}</small>
+        </article>
+      </div>
+
+      {storageNotice && (
+        <p className="doc-storage-notice">
+          ⚙️ {storageNotice} Azure App Settings 또는 로컬 환경변수에 AZURE_COSMOS_ENDPOINT를
+          설정하면 Cosmos DB 저장·조회가 활성화됩니다.
         </p>
-      </header>
+      )}
 
       <div className="doc-layout">
         <div className="doc-main">
@@ -237,8 +315,8 @@ export default function DlsdydDocumentAgent({ onReminderCreated }) {
               <strong>{file ? file.name : "이미지 / PDF / 텍스트 파일 첨부"}</strong>
             </label>
 
-            <button className="doc-primary" onClick={handleSubmit} disabled={loading} type="button">
-              {loading ? "AI가 처리 중..." : "✨ AI에게 맡기기"}
+            <button className="doc-primary" onClick={handleSubmit} disabled={loading || !storageReady} type="button">
+              {loading ? "AI가 처리 중..." : storageReady ? "✨ AI에게 맡기기" : "Cosmos DB 설정 필요"}
             </button>
             {error && <p className="doc-error">⚠️ {error}</p>}
             {calendarNotice && <p className="doc-success">✅ {calendarNotice}</p>}

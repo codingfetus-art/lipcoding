@@ -41,7 +41,7 @@
 
 ### 0. 문서 액션 화면(origin/dlsdyd)
 
-현재 앱을 덮어쓰지 않고 별도 "문서 액션" 화면으로 origin/dlsdyd 브랜치의 문서 처리 흐름을 추가한다. 이 화면은 영수증, 청구서, 계약서 텍스트를 입력받아 문서 유형을 분류하고, 지출 기록, 리마인드, 계약 확인 초안을 생성한다. 기본값은 결제 초과를 막기 위해 로컬 JSON 저장과 텍스트/파일명 기반 처리만 사용한다. 사용자가 보유 크레딧 안에서 Azure 사용을 명시적으로 허용할 때만 `DOCUMENT_ACTION_AZURE_ENABLED=true`로 Azure Document Intelligence OCR, Blob Storage 원본 저장, Cosmos DB 영구 저장을 켠다. 청구서의 납부기한이나 계약서의 만기일에서 리마인드가 생성되면 같은 날짜의 RoutineFit 캘린더에도 자동으로 일정이 추가된다.
+현재 앱을 덮어쓰지 않고 별도 "문서 액션" 화면으로 origin/dlsdyd 브랜치의 문서 처리 흐름을 추가한다. 이 화면은 영수증, 청구서, 계약서 텍스트를 입력받아 문서 유형을 분류하고, 지출 기록, 리마인드, 계약 확인 초안을 생성한다. RoutineFit과 같은 탭, 요약 카드, 둥근 카드 레이아웃을 사용해 별도 앱처럼 튀지 않게 구성한다. 문서 액션 지출과 리마인드는 로컬 JSON에 저장하지 않고, `AZURE_COSMOS_ENDPOINT`가 설정된 Cosmos DB에서 저장·조회한다. `AZURE_COSMOS_KEY`가 없으면 Azure CLI 로그인 또는 Managed Identity를 쓰는 `DefaultAzureCredential`로 인증한다. Cosmos DB 저장은 origin/dlsdyd처럼 `/userId` 파티션의 `expenses`, `reminders` 컨테이너를 사용하고, 같은 영수증·청구서·계약서는 안정적인 중복 키로 기존 레코드를 재사용한다. 청구서의 납부기한이나 계약서의 만기일에서 리마인드가 생성되면 같은 날짜의 RoutineFit 캘린더에도 "마감: ..." 일정이 자동으로 추가되고, 캘린더 기준 날짜도 해당 마감일로 이동해 월간 일정과 하루 시간표에서 바로 확인할 수 있다.
 
 ### 1. 캘린더 기반 일정 입력
 

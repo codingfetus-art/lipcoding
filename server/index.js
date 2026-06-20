@@ -102,17 +102,25 @@ app.post("/api/process", upload.single("file"), async (req, res) => {
     const result = await processDocumentAction({ text, file, fileName });
     res.json(result);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(error.statusCode || 400).json({ error: error.message, code: error.code });
   }
 });
 
 app.get("/api/reminders", async (_req, res) => {
-  const reminders = await listReminders();
-  res.json([...reminders].sort((left, right) => left.dueDate.localeCompare(right.dueDate)));
+  try {
+    const reminders = await listReminders();
+    res.json([...reminders].sort((left, right) => left.dueDate.localeCompare(right.dueDate)));
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ error: error.message, code: error.code });
+  }
 });
 
 app.get("/api/summary", async (_req, res) => {
-  res.json(await getExpenseSummary());
+  try {
+    res.json(await getExpenseSummary());
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ error: error.message, code: error.code });
+  }
 });
 
 app.use(express.static(path.join(__dirname, "public")));
