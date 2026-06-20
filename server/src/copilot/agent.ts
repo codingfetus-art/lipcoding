@@ -18,7 +18,8 @@ const SYSTEM_PROMPT = `You are a personal finance & document assistant.
 The user uploads a document (receipt, bill/invoice, contract, or other). Your job:
 
 1. Read the document content (from the provided text and/or the attached image).
-2. Decide the document type: receipt, bill, contract, or other.
+2. Decide the document type: receipt, bill, contract, or other, and immediately
+   call classify_document with that type (exactly once, before any other tool).
 3. Take the right actions using the available tools:
    - RECEIPT: extract merchant, date (YYYY-MM-DD), total, currency, a Korean
      spending category (식비/카페/교통/쇼핑/생활/의료/기타), and line items.
@@ -143,14 +144,17 @@ export async function processDocument(
       response?.data.content?.trim() ||
       "문서를 처리했지만 요약을 생성하지 못했습니다.";
 
-    // Infer document type from which side-effects the agent performed.
-    const documentType: ProcessResult["documentType"] = collector.expense
-      ? "receipt"
-      : collector.reminder
-        ? "bill"
-        : collector.draftMessage
-          ? "contract"
-          : "other";
+    // The agent declares the type via classify_document. Fall back to inferring
+    // it from the side-effects it performed if it skipped the classification.
+    const documentType: ProcessResult["documentType"] =
+      collector.documentType ??
+      (collector.expense
+        ? "receipt"
+        : collector.reminder
+          ? "bill"
+          : collector.draftMessage
+            ? "contract"
+            : "other");
 
     return buildResult(collector, documentType, summary);
   } finally {

@@ -5,7 +5,12 @@ import {
   saveReminder,
   monthToDateByCategory,
 } from "../store/store.js";
-import type { ExpenseRecord, Reminder, ProcessResult } from "../types.js";
+import type {
+  DocumentType,
+  ExpenseRecord,
+  Reminder,
+  ProcessResult,
+} from "../types.js";
 
 /**
  * Custom tools exposed to the Copilot agent.
@@ -26,9 +31,15 @@ export interface ToolCollector {
   userId: string;
   sourceFile?: string;
   steps: string[];
+  /** Document type the agent explicitly declared via classify_document. */
+  documentType?: DocumentType;
   expense?: ExpenseRecord;
   reminder?: Reminder;
   draftMessage?: string;
+}
+
+interface ClassifyDocumentArgs {
+  type: DocumentType;
 }
 
 interface SaveExpenseArgs {
@@ -65,6 +76,28 @@ function currentMonthIso(date: string): string {
 
 export function createTools(collector: ToolCollector) {
   return [
+    defineTool("classify_document", {
+      description:
+        "Declare the document type. Call this exactly once, before any other tool, as soon as you have determined what the document is.",
+      parameters: {
+        type: "object",
+        properties: {
+          type: {
+            type: "string",
+            enum: ["receipt", "bill", "contract", "other"],
+            description: "The detected document type.",
+          },
+        },
+        required: ["type"],
+      },
+      handler: async (raw) => {
+        const args = raw as ClassifyDocumentArgs;
+        collector.documentType = args.type;
+        collector.steps.push(`문서 분류: ${args.type}`);
+        return { type: args.type };
+      },
+    }),
+
     defineTool("save_expense", {
       description:
         "Persist a receipt as an expense record. Call this once per receipt after you have extracted the merchant, date, total amount and a spending category.",
