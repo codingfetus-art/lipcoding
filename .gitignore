@@ -38,11 +38,13 @@ logs/
 Thumbs.db
 .vscode/
 .idea/
+.playwright-mcp/
 
 # Local databases
 *.sqlite
 *.sqlite3
 *.db
+server/data/
 
 # Azure / deployment local state
 .azure/

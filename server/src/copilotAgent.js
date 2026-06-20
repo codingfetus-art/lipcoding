@@ -1,16 +1,23 @@
+import { createRequire } from "node:module";
 import { COPILOT_CONFIG } from "./config.js";
 
+const require = createRequire(import.meta.url);
+
 export async function callCopilot(prompt) {
-  const { CopilotClient } = await import("@github/copilot-sdk");
-  const client = new CopilotClient();
+  const { CopilotClient, RuntimeConnection } = await import("@github/copilot-sdk");
+  const client = new CopilotClient({
+    connection: RuntimeConnection.forStdio({
+      path: resolveCopilotRuntimePath()
+    })
+  });
 
   await client.start();
   let session;
 
   try {
-    session = await client.createSession({
-      model: COPILOT_CONFIG.model
-    });
+    session = await client.createSession(
+      COPILOT_CONFIG.model ? { model: COPILOT_CONFIG.model } : {}
+    );
 
     const messages = [];
     await waitForCopilotResponse(session, prompt, messages);
@@ -27,6 +34,14 @@ export async function callCopilot(prompt) {
     }
     await client.stop();
   }
+}
+
+function resolveCopilotRuntimePath() {
+  return (
+    process.env.COPILOT_RUNTIME_PATH ||
+    process.env.COPILOT_CLI_PATH ||
+    require.resolve("@github/copilot/npm-loader.js")
+  );
 }
 
 function waitForCopilotResponse(session, prompt, messages) {

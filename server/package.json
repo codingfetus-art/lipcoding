@@ -9,8 +9,13 @@
     "test": "node --test"
   },
   "dependencies": {
+    "@azure/ai-form-recognizer": "^5.1.0",
+    "@azure/cosmos": "^4.9.3",
+    "@azure/identity": "^4.13.1",
+    "@azure/storage-blob": "^12.32.0",
     "@github/copilot-sdk": "^1.0.2",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "multer": "^2.2.0"
   },
   "engines": {
     "node": ">=20.19.0"
