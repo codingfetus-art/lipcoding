@@ -43,6 +43,7 @@ jobs:
           if [ -d server/data ]; then cp -r server/data deploy-package/; fi
           if [ -f server/.env.example ]; then cp server/.env.example deploy-package/.env.example; fi
       - name: Deploy to Azure Web App
+        if: ${{ vars.ENABLE_AZURE_ACTION_DEPLOY == 'true' }}
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
