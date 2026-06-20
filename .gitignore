@@ -1,0 +1,49 @@
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+.github
+
+# API keys / credentials
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+serviceAccount.json
+token.json
+
+# Node / React / Next
+node_modules/
+dist/
+build/
+.next/
+out/
+.vercel/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# Logs
+*.log
+logs/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local databases
+*.sqlite
+*.sqlite3
+*.db
+
+# Azure / deployment local state
+.azure/
+.azure-dev/
