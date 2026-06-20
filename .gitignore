@@ -2,7 +2,7 @@
 .env
 .env.*
 !.env.example
-.github
+.github/copilot-instructions.md
 
 # API keys / credentials
 *.pem
