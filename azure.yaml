@@ -1,0 +1,19 @@
+# azd configuration: builds the Dockerfile and deploys to Azure Container Apps.
+# See https://aka.ms/azure-dev/schema
+name: docu-action-agent
+metadata:
+  template: docu-action-agent@0.1.0
+
+infra:
+  provider: bicep
+  path: infra
+
+services:
+  web:
+    project: .
+    host: containerapp
+    language: docker
+    docker:
+      path: ./Dockerfile
+      context: .
+      remoteBuild: true

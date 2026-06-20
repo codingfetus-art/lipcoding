@@ -1,0 +1,16 @@
+{
+  "name": "docu-action-agent",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Receipt/Document Action Agent - upload a document and a Copilot SDK agent classifies, extracts, analyzes and takes the right follow-up action.",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=server & npm run dev --workspace=web",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:web": "npm run dev --workspace=web",
+    "build": "npm run build --workspace=server && npm run build --workspace=web"
+  }
+}
