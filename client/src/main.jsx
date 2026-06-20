@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import DlsdydDocumentAgent from "./DlsdydDocumentAgent.jsx";
 import { generatePlan, generateReview } from "./api.js";
@@ -78,6 +78,8 @@ function App() {
   const [loading, setLoading] = useState("");
   const [error, setError] = useState("");
   const [activePage, setActivePage] = useState("home");
+  const [health, setHealth] = useState(null);
+  const [healthError, setHealthError] = useState("");
 
   const payload = useMemo(
     () => ({
@@ -103,6 +105,35 @@ function App() {
       () => buildHistoryPatternSummaries(state.historyRecords),
       [state.historyRecords]
   );
+
+  useEffect(() => {
+    let ignore = false;
+
+    fetch("/api/health")
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "헬스체크 조회 실패");
+        }
+        return data;
+      })
+      .then((data) => {
+        if (!ignore) {
+          setHealth(data);
+          setHealthError("");
+        }
+      })
+      .catch((requestError) => {
+        if (!ignore) {
+          setHealth(null);
+          setHealthError(requestError.message);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   function updateState(updater) {
     setState((current) => saveState(updater(current)));
@@ -368,6 +399,8 @@ function App() {
             tasks={state.tasks}
             schedule={schedule}
           />
+
+          <CloudReadinessPanel health={health} healthError={healthError} />
 
           <MonthCalendar
             selectedDate={state.planningStartDate}
@@ -888,6 +921,69 @@ function SummaryCard({ label, value, detail, tone = "default" }) {
       <strong>{value}</strong>
       <small>{detail}</small>
     </article>
+  );
+}
+
+function CloudReadinessPanel({ health, healthError }) {
+  const documentAction = health?.documentAction;
+  const cloud = health?.cloud;
+  const ai = health?.ai;
+  const cosmosReady = documentAction?.storageBackend === "cosmos";
+  const azureReady = Boolean(cloud?.azureAppService);
+  const statusClass = cosmosReady ? "success" : healthError ? "danger" : "pending";
+  const statusLabel = cosmosReady ? "Cosmos 연결" : healthError ? "확인 실패" : "확인 중";
+
+  return (
+    <section className="card cloud-readiness-card">
+      <div className="validation-topline">
+        <div>
+          <p className="eyebrow dark">Judge-ready cloud check</p>
+          <h2>심사용 Azure·AI 상태</h2>
+        </div>
+        <span className={`status-pill ${statusClass}`}>{statusLabel}</span>
+      </div>
+
+      {healthError ? (
+        <p className="alert warning">헬스체크 확인 실패: {healthError}</p>
+      ) : (
+        <div className="summary-strip cloud-summary-strip">
+          <SummaryCard
+            label="호스팅"
+            value={azureReady ? "Azure App Service" : "Local"}
+            detail={azureReady ? "공개 배포 URL에서 실행 중" : "로컬 개발 서버"}
+          />
+          <SummaryCard
+            label="저장소"
+            value={documentAction?.storageBackend || "확인 중"}
+            detail={
+              cosmosReady
+                ? `인증: ${documentAction.cosmosAuthMode}`
+                : "Cosmos DB 연결 전"
+            }
+            tone={cosmosReady ? "default" : "warning"}
+          />
+          <SummaryCard
+            label="AI 안전장치"
+            value="검증 우선"
+            detail="Copilot 실패 시 deterministic plan 반환"
+          />
+          <SummaryCard
+            label="Copilot SDK"
+            value={ai?.provider || "copilot-sdk"}
+            detail={`타임아웃 ${ai?.timeoutMs ?? 45000}ms`}
+          />
+        </div>
+      )}
+
+      <div className="judge-proof-list">
+        <span>데모 증거</span>
+        <ul>
+          <li>청구서 마감일은 문서 액션에서 RoutineFit 캘린더 일정으로 연결됩니다.</li>
+          <li>Cosmos DB는 `/userId` 파티션과 중복 키로 저장/조회 무결성을 유지합니다.</li>
+          <li>AI 설명은 서버 검증 결과를 기반으로 생성되어 환각 위험을 줄입니다.</li>
+        </ul>
+      </div>
+    </section>
   );
 }
 

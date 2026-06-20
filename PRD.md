@@ -19,7 +19,8 @@ The app is designed for a user who wants to turn real-life constraints into a re
 3. Use GitHub Copilot SDK for plan explanation and execution review, while deterministic validation protects scheduling correctness.
 4. Add a document action flow that converts receipts, bills, and contracts into actionable expense records and reminders.
 5. Store document action expenses and reminders in Azure Cosmos DB, not local JSON.
-6. Make Azure readiness visible through `/api/health`.
+6. Make Azure readiness visible through `/api/health` and the reviewer-facing home screen.
+7. Surface responsible AI and validation evidence directly in the submitted app.
 
 ## 3. Non-goals
 
@@ -97,6 +98,16 @@ Acceptance criteria:
 - `/api/health` shows `storageBackend: "cosmos"` when configured.
 - If Cosmos is not configured, the UI remains stable and shows a setup notice.
 
+### Reviewer readiness
+
+As a reviewer, I want to confirm the deployed app uses Azure, Cosmos DB, and validation without opening developer tools.
+
+Acceptance criteria:
+
+- The home screen shows a `심사용 Azure·AI 상태` panel.
+- The panel reads `/api/health` and displays App Service, Cosmos DB, auth mode, Copilot SDK, and deterministic validation status.
+- The panel explains demo evidence for document-to-calendar conversion, Cosmos DB dedupe/readback, and responsible AI guardrails.
+
 ## 6. Functional requirements
 
 ### Frontend
@@ -108,6 +119,7 @@ Acceptance criteria:
   - `문서 액션`
 - Show selected date summary cards.
 - Show a month calendar and daily timeline.
+- Show reviewer-facing Azure, storage, AI, and validation readiness on the home screen.
 - Keep Document Action visually aligned with RoutineFit cards, buttons, and summary strips.
 - Disable Document Action processing when Cosmos DB is unconfigured.
 
@@ -197,7 +209,9 @@ Expected health shape:
 - User can process a bill and see the due date become a calendar event.
 - Document action data is saved to and read from Cosmos DB.
 - `/api/health` confirms Cosmos storage and Azure App Service runtime.
+- Home screen readiness panel confirms the same cloud state without requiring API inspection.
 - Repeated document processing does not create duplicate records for the same dedupe key.
+- Responsible AI behavior is visible: deterministic validation stays available even if Copilot SDK fails.
 
 ## 10. Risks and mitigations
 
@@ -209,8 +223,10 @@ Expected health shape:
 | Duplicate document processing | Stable dedupe key and existing-record reuse |
 | Unexpected Azure cost | Serverless Cosmos, optional OCR/Blob gate, no secrets in code |
 
-## 11. Open items
+## 11. Reviewer demo script
 
-- Add production App Service deployment automation that does not depend on publish profile secrets.
-- Add a reviewer-friendly demo script that shows plan generation, document processing, Cosmos readback, and `/api/health`.
-- Add richer responsible AI documentation for prompt injection and privacy handling.
+1. Open `https://routinefit-docaction-784016.azurewebsites.net`.
+2. Confirm the `심사용 Azure·AI 상태` panel shows Azure App Service, Cosmos DB, and `default-azure-credential`.
+3. Generate a daily plan and confirm validation messages are shown for scheduling constraints.
+4. Open `문서 액션`, process a bill or contract, and confirm the reminder appears in the RoutineFit calendar.
+5. Re-process the same document and confirm the existing Cosmos DB record is reused instead of duplicated.

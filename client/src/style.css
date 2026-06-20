@@ -801,8 +801,49 @@ textarea {
   color: #9d1d1d;
 }
 
+.status-pill.pending {
+  background: #eef3ff;
+  color: #3154f4;
+}
+
 .validation-metrics {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cloud-readiness-card {
+  background:
+    linear-gradient(135deg, rgba(238, 244, 255, 0.96), rgba(255, 255, 255, 0.96));
+  display: grid;
+  gap: 1rem;
+}
+
+.cloud-summary-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.judge-proof-list {
+  background: #f7f9ff;
+  border: 1px solid #dfe7fb;
+  border-radius: 1rem;
+  color: #3a4560;
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.9rem 1rem;
+}
+
+.judge-proof-list span {
+  color: #3154f4;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.judge-proof-list ul {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding-left: 1.1rem;
 }
 
 .issue-list {
@@ -902,7 +943,8 @@ textarea {
   }
 
   .summary-strip,
-  .validation-metrics {
+  .validation-metrics,
+  .cloud-summary-strip {
     grid-template-columns: 1fr;
   }
 
