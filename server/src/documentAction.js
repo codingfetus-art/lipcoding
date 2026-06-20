@@ -294,18 +294,10 @@ async function getCosmosContainers() {
 
   const databaseId = process.env.AZURE_COSMOS_DATABASE || "docuagent";
   const client = getCosmosClient();
-  const { database } = await client.databases.createIfNotExists({ id: databaseId });
-  const { container: expenses } = await database.containers.createIfNotExists({
-    id: "expenses",
-    partitionKey: { paths: ["/userId"] }
-  });
-  const { container: reminders } = await database.containers.createIfNotExists({
-    id: "reminders",
-    partitionKey: { paths: ["/userId"] }
-  });
-  expensesContainer = expenses;
-  remindersContainer = reminders;
-  return { expenses, reminders };
+  const database = client.database(databaseId);
+  expensesContainer = database.container("expenses");
+  remindersContainer = database.container("reminders");
+  return { expenses: expensesContainer, reminders: remindersContainer };
 }
 
 async function saveCosmosRecord(container, record, recordType) {
